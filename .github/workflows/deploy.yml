@@ -43,35 +43,48 @@ jobs:
           script: |
             # Stop existing app (if running)
             pkill -f 'java -jar' || echo "No app running"
-            sleep 5  # Give the old process time to stop
+            sleep 5
 
             # Rename the uploaded jar to app.jar
             mv ~/psa-web-krawler/*.jar ~/psa-web-krawler/app.jar
 
-            # Create a startup script
-            cat << 'EOF' > ~/psa-web-krawler/start.sh
-            #!/bin/bash
-            cd ~/psa-web-krawler
-            nohup java -jar app.jar \
+            # Create systemd service file
+            sudo tee /etc/systemd/system/webkrawler.service << EOF
+            [Unit]
+            Description=Web Krawler Spring Boot Application
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=${{ secrets.EC2_USER }}
+            WorkingDirectory=/home/${{ secrets.EC2_USER }}/psa-web-krawler
+            ExecStart=/usr/bin/java -jar app.jar \
               --spring.neo4j.uri=${{ secrets.NEO4J_BOLT_URL }} \
               --spring.neo4j.authentication.username=${{ secrets.NEO4J_USERNAME }} \
-              --spring.neo4j.authentication.password=${{ secrets.NEO4J_PASSWORD }} \
-              > app.log 2>&1 &
+              --spring.neo4j.authentication.password=${{ secrets.NEO4J_PASSWORD }}
+            SuccessExitStatus=143
+            TimeoutStopSec=10
+            Restart=always
+            RestartSec=5
 
-            # Wait a few seconds to check if the process is still running
-            sleep 10
-            if pgrep -f 'java -jar.*app.jar' > /dev/null; then
-              echo "Application started successfully"
-              exit 0
-            else
-              echo "Application failed to start. Last 50 lines of log:"
-              tail -n 50 app.log
-              exit 1
-            fi
+            [Install]
+            WantedBy=multi-user.target
             EOF
 
-            # Make the script executable
-            chmod +x ~/psa-web-krawler/start.sh
+            # Reload systemd daemon
+            sudo systemctl daemon-reload
 
-            # Run the startup script
-            ~/psa-web-krawler/start.sh
+            # Start the service
+            sudo systemctl restart webkrawler
+
+            # Wait for service to start and check status
+            sleep 10
+            if sudo systemctl is-active --quiet webkrawler; then
+              echo "Service started successfully"
+              sudo systemctl status webkrawler
+              exit 0
+            else
+              echo "Service failed to start. Logs:"
+              sudo journalctl -u webkrawler -n 50 --no-pager
+              exit 1
+            fi
