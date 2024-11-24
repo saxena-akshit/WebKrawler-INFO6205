@@ -43,12 +43,35 @@ jobs:
           script: |
             # Stop existing app (if running)
             pkill -f 'java -jar' || echo "No app running"
+            sleep 5  # Give the old process time to stop
 
             # Rename the uploaded jar to app.jar
             mv ~/psa-web-krawler/*.jar ~/psa-web-krawler/app.jar
 
-            # Start the app
-            nohup java -jar ~/psa-web-krawler/app.jar \
+            # Create a startup script
+            cat << 'EOF' > ~/psa-web-krawler/start.sh
+            #!/bin/bash
+            cd ~/psa-web-krawler
+            nohup java -jar app.jar \
               --spring.neo4j.uri=${{ secrets.NEO4J_BOLT_URL }} \
               --spring.neo4j.authentication.username=${{ secrets.NEO4J_USERNAME }} \
-              --spring.neo4j.authentication.password=${{ secrets.NEO4J_PASSWORD }} > ~/psa-web-krawler/app.log 2>&1 &
+              --spring.neo4j.authentication.password=${{ secrets.NEO4J_PASSWORD }} \
+              > app.log 2>&1 &
+
+            # Wait a few seconds to check if the process is still running
+            sleep 10
+            if pgrep -f 'java -jar.*app.jar' > /dev/null; then
+              echo "Application started successfully"
+              exit 0
+            else
+              echo "Application failed to start. Last 50 lines of log:"
+              tail -n 50 app.log
+              exit 1
+            fi
+            EOF
+
+            # Make the script executable
+            chmod +x ~/psa-web-krawler/start.sh
+
+            # Run the startup script
+            ~/psa-web-krawler/start.sh
