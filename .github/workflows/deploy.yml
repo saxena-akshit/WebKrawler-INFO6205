@@ -41,6 +41,11 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
+            set -e
+
+            # Debug uploaded files
+            ls -l ~/psa-web-krawler/
+
             # Stop existing app (if running)
             pkill -f 'java -jar' || echo "No app running"
             sleep 5
@@ -48,8 +53,11 @@ jobs:
             # Rename the uploaded jar to app.jar
             mv ~/psa-web-krawler/*.jar ~/psa-web-krawler/app.jar
 
+            # Ensure proper permissions
+            sudo chown ${{ secrets.EC2_USER }}:$${{ secrets.EC2_USER }} ~/psa-web-krawler/app.jar
+
             # Create systemd service file
-            sudo tee /etc/systemd/system/webkrawler.service << EOF
+            sudo tee /etc/systemd/system/webkrawler.service > /dev/null << EOF
             [Unit]
             Description=Web Krawler Spring Boot Application
             After=network.target
@@ -71,20 +79,14 @@ jobs:
             WantedBy=multi-user.target
             EOF
 
-            # Reload systemd daemon
+            # Reload and restart systemd service
             sudo systemctl daemon-reload
-
-            # Start the service
             sudo systemctl restart webkrawler
 
-            # Wait for service to start and check status
+            # Check service status
             sleep 10
-            if sudo systemctl is-active --quiet webkrawler; then
-              echo "Service started successfully"
-              sudo systemctl status webkrawler
-              exit 0
-            else
+            sudo systemctl is-active --quiet webkrawler && sudo systemctl status webkrawler || {
               echo "Service failed to start. Logs:"
               sudo journalctl -u webkrawler -n 50 --no-pager
               exit 1
-            fi
+            }
