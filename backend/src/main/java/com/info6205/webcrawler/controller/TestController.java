@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TestController {
 
-    @RequestMapping(value = "/test-api", method = RequestMethod.HEAD)
+    @RequestMapping(value = "/test-api-new", method = RequestMethod.HEAD)
     public ResponseEntity<Void> testApi() {
         return ResponseEntity.ok().build();
     }
