@@ -1,92 +1,88 @@
-name: Deploy Spring Boot App to EC2
+name: Deploy to EC2
 
 on:
   push:
     branches:
-      - main
+      - master
+
+env:
+  EC2_USER: ubuntu
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  REMOTE_DIR: /home/ubuntu/psa-web-krawler
+  SERVICE_NAME: my-app
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v3
         with:
           java-version: "17"
           distribution: "temurin"
 
       - name: Build with Maven
+        run: mvn -B package --file backend/pom.xml
+
+      - name: Setup SSH
         run: |
-          cd backend
-          mvn clean package
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2.key
+          chmod 600 ~/.ssh/ec2.key
+          echo -e "Host ec2\n\tHostName ${{ env.EC2_HOST }}\n\tUser ${{ env.EC2_USER }}\n\tIdentityFile ~/.ssh/ec2.key\n\tStrictHostKeyChecking no" > ~/.ssh/config
 
-      - name: Copy JAR to EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
-          source: "backend/target/*.jar"
-          target: "~/psa-web-krawler/"
-          strip_components: 2
+      - name: Upload JAR to EC2
+        run: |
+          scp backend/target/webcrawler-0.0.1-SNAPSHOT.jar ec2:${{ env.REMOTE_DIR }}/app.jar
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
-          script: |
-            set -e
-
-            # Debug uploaded files
-            ls -l ~/psa-web-krawler/
-
-            # Stop existing app (if running)
-            pkill -f 'java -jar' || echo "No app running"
-            sleep 5
-
-            # Rename the uploaded jar to app.jar
-            mv ~/psa-web-krawler/*.jar ~/psa-web-krawler/app.jar
-
-            # Ensure proper permissions
-            sudo chown ${{ secrets.EC2_USER }}:$${{ secrets.EC2_USER }} ~/psa-web-krawler/app.jar
-
+      - name: Configure and Start Service
+        run: |
+          ssh ec2 '
+            # Ensure Java is installed
+            if ! command -v java &> /dev/null; then
+              sudo apt-get update
+              sudo apt-get install -y openjdk-17-jdk
+            fi
+            
+            # Create directory if needed
+            mkdir -p ${{ env.REMOTE_DIR }}
+            
             # Create systemd service file
-            sudo tee /etc/systemd/system/webkrawler.service > /dev/null << EOF
-            [Unit]
-            Description=Web Krawler Spring Boot Application
-            After=network.target
+            sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service << EOL
+          [Unit]
+          Description=Spring Boot Application
+          After=network.target
 
-            [Service]
-            Type=simple
-            User=${{ secrets.EC2_USER }}
-            WorkingDirectory=/home/${{ secrets.EC2_USER }}/psa-web-krawler
-            ExecStart=/usr/bin/java -jar app.jar \
-              --spring.neo4j.uri=${{ secrets.NEO4J_BOLT_URL }} \
-              --spring.neo4j.authentication.username=${{ secrets.NEO4J_USERNAME }} \
-              --spring.neo4j.authentication.password=${{ secrets.NEO4J_PASSWORD }}
-            SuccessExitStatus=143
-            TimeoutStopSec=10
-            Restart=always
-            RestartSec=5
+          [Service]
+          Type=simple
+          User=${{ env.EC2_USER }}
+          WorkingDirectory=${{ env.REMOTE_DIR }}
+          ExecStart=/usr/bin/java -jar ${{ env.REMOTE_DIR }}/app.jar
+          SuccessExitStatus=143
+          TimeoutStopSec=10
+          Restart=always
+          RestartSec=5
 
-            [Install]
-            WantedBy=multi-user.target
-            EOF
-
-            # Reload and restart systemd service
+          [Install]
+          WantedBy=multi-user.target
+          EOL
+            
+            # Reload and restart service
             sudo systemctl daemon-reload
-            sudo systemctl restart webkrawler
-
+            sudo systemctl enable ${{ env.SERVICE_NAME }}
+            sudo systemctl restart ${{ env.SERVICE_NAME }}
+            
             # Check service status
-            sleep 10
-            sudo systemctl is-active --quiet webkrawler && sudo systemctl status webkrawler || {
-              echo "Service failed to start. Logs:"
-              sudo journalctl -u webkrawler -n 50 --no-pager
+            sleep 5
+            if sudo systemctl is-active --quiet ${{ env.SERVICE_NAME }}; then
+              echo "Service started successfully!"
+              sudo systemctl status ${{ env.SERVICE_NAME }}
+            else
+              echo "Service failed to start. Checking logs..."
+              sudo journalctl -u ${{ env.SERVICE_NAME }} -n 50 --no-pager
               exit 1
-            }
+            fi
+          '
