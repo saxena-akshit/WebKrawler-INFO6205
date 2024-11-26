@@ -10,6 +10,7 @@ env:
   EC2_HOST: ${{ secrets.EC2_HOST }}
   REMOTE_DIR: /home/ubuntu/psa-web-krawler
   SERVICE_NAME: my-app
+  JAR_NAME: webcrawler-0.0.1-SNAPSHOT.jar
 
 jobs:
   deploy:
@@ -23,9 +24,18 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
+          cache: "maven"
+          cache-dependency-path: backend/pom.xml
 
       - name: Build with Maven
-        run: mvn -B package --file backend/pom.xml
+        working-directory: backend
+        run: mvn -B package --file pom.xml -DskipTests
+
+      - name: Create .env file for deployment
+        run: |
+          echo "NEO4J_URL=${{ secrets.NEO4J_URL }}" > backend/.env
+          echo "NEO4J_USERNAME=${{ secrets.NEO4J_USERNAME }}" >> backend/.env
+          echo "NEO4J_PASSWORD=${{ secrets.NEO4J_PASSWORD }}" >> backend/.env
 
       - name: Setup SSH
         run: |
@@ -34,55 +44,63 @@ jobs:
           chmod 600 ~/.ssh/ec2.key
           echo -e "Host ec2\n\tHostName ${{ env.EC2_HOST }}\n\tUser ${{ env.EC2_USER }}\n\tIdentityFile ~/.ssh/ec2.key\n\tStrictHostKeyChecking no" > ~/.ssh/config
 
-      - name: Upload JAR to EC2
+      - name: Upload Deployment Files
         run: |
-          scp backend/target/webcrawler-0.0.1-SNAPSHOT.jar ec2:${{ env.REMOTE_DIR }}/app.jar
+          scp backend/target/${{ env.JAR_NAME }} backend/.env ec2:${{ env.REMOTE_DIR }}/
 
       - name: Configure and Start Service
         run: |
           ssh ec2 '
-            # Ensure Java is installed
-            if ! command -v java &> /dev/null; then
-              sudo apt-get update
-              sudo apt-get install -y openjdk-17-jdk
-            fi
-            
+            # Ensure Java and required tools are installed
+            sudo apt-get update
+            sudo apt-get install -y openjdk-17-jdk unzip
+
             # Create directory if needed
             mkdir -p ${{ env.REMOTE_DIR }}
-            
-            # Create systemd service file
+            cd ${{ env.REMOTE_DIR }}
+
+            # Load environment variables
+            export $(cat .env | xargs)
+
+            # Create systemd service file with environment variables
             sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service << EOL
-          [Unit]
-          Description=Spring Boot Application
-          After=network.target
+            [Unit]
+            Description=Web Crawler Spring Boot Application
+            After=network.target
 
-          [Service]
-          Type=simple
-          User=${{ env.EC2_USER }}
-          WorkingDirectory=${{ env.REMOTE_DIR }}
-          ExecStart=/usr/bin/java -jar ${{ env.REMOTE_DIR }}/app.jar
-          SuccessExitStatus=143
-          TimeoutStopSec=10
-          Restart=always
-          RestartSec=5
+            [Service]
+            Type=simple
+            User=${{ env.EC2_USER }}
+            WorkingDirectory=${{ env.REMOTE_DIR }}
+            EnvironmentFile=${{ env.REMOTE_DIR }}/.env
+            ExecStart=/usr/bin/java -jar ${{ env.REMOTE_DIR }}/${{ env.JAR_NAME }} \
+              --spring.application.name=${{ env.SERVICE_NAME }} \
+              --neo4j.url=\$NEO4J_URL \
+              --neo4j.username=\$NEO4J_USERNAME \
+              --neo4j.password=\$NEO4J_PASSWORD
 
-          [Install]
-          WantedBy=multi-user.target
-          EOL
+            SuccessExitStatus=143
+            TimeoutStopSec=10
+            Restart=always
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+            EOL
             
             # Reload and restart service
             sudo systemctl daemon-reload
             sudo systemctl enable ${{ env.SERVICE_NAME }}
             sudo systemctl restart ${{ env.SERVICE_NAME }}
             
-            # Check service status
-            sleep 5
+            # Check service status with detailed logging
+            sleep 10
             if sudo systemctl is-active --quiet ${{ env.SERVICE_NAME }}; then
               echo "Service started successfully!"
               sudo systemctl status ${{ env.SERVICE_NAME }}
             else
               echo "Service failed to start. Checking logs..."
-              sudo journalctl -u ${{ env.SERVICE_NAME }} -n 50 --no-pager
+              sudo journalctl -u ${{ env.SERVICE_NAME }} -n 100 --no-pager
               exit 1
             fi
           '
