@@ -18,18 +18,12 @@
   flex: 1;
 }
 
-.list-section {
-  flex: 2;
-  padding-right: 20px;
-  overflow-y: auto;
-}
-
-.graph-section {
+.list-section,
+.ranking-section,
+.blacklist-section {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 h1 {
@@ -52,13 +46,13 @@ p {
   color: #555;
 }
 
-.url-list {
-  list-style-type: none;
+ul {
+  list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.url-item {
+li {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -68,7 +62,7 @@ p {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.url-item:hover {
+li:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
@@ -159,6 +153,7 @@ p {
 .tab-content {
   flex: 1;
   overflow-y: auto;
+  padding: 20px;
 }
 
 .scrollable-list {
@@ -169,13 +164,13 @@ p {
   padding: 15px;
 }
 
-.url-list {
+ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.url-item {
+li {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -184,7 +179,50 @@ p {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
 }
 
-.url-item:hover {
+li:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.blacklist-section {
+  display: block;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+}
+
+.blacklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.blacklist-item {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  padding: 15px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+}
+
+.blacklist-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+
+body {
+  background: url("/bg.jpg") no-repeat center center fixed;
+  background-size: cover;
+}
+
+h2 {
+  text-align: center;
+  font-size: 24px;
+  color: #ffffff;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
 }
