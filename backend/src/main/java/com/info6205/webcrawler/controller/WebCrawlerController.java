@@ -1,5 +1,7 @@
 package com.info6205.webcrawler.controller;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,8 +24,14 @@ public class WebCrawlerController {
     }
 
     @PostMapping("/start")
-    public ResponseEntity<String> startCrawl(@RequestParam String startUrl) {
-        crawlerService.startCrawl(startUrl);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Map<String, Object>> startCrawl(@RequestParam String startUrl) {
+        try {
+            Map<String, Object> result = crawlerService.startCrawl(startUrl);
+            System.out.println(result);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        return null;
     }
 }
