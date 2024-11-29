@@ -2,9 +2,9 @@ package com.info6205.webcrawler.entity;
 
 public class UrlTask {
 
-    public final String url;
-    public final int depth;
-    public final int priority;
+    private final String url;
+    private final int depth;
+    private final int priority;
 
     public UrlTask(String url, int depth, int priority) {
         this.url = url;
@@ -13,6 +13,14 @@ public class UrlTask {
     }
 
     public int getPriority() {
-        return priority;
+        return this.priority;
+    }
+
+    public int getDepth() {
+        return this.depth;
+    }
+
+    public String getUrl() {
+        return this.url;
     }
 }
