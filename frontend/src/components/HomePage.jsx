@@ -1,46 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../App.css';
 import { FaSearch } from 'react-icons/fa';
 
 function HomePage() {
-    const [isPopupVisible, setIsPopupVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const navigate = useNavigate();
 
     const handleSearchClick = () => {
-        setIsPopupVisible(true);
-    };
-
-    const handleOutsideClick = (event) => {
-        if (event.target.className === 'popup') {
-            setIsPopupVisible(false);
+        if (searchQuery.trim() !== '') {
+            navigate('/results', { state: { query: searchQuery } });
         }
     };
-
-    useEffect(() => {
-        if (isPopupVisible) {
-            document.addEventListener('click', handleOutsideClick);
-        } else {
-            document.removeEventListener('click', handleOutsideClick);
-        }
-
-        return () => {
-            document.removeEventListener('click', handleOutsideClick);
-        };
-    }, [isPopupVisible]);
 
     return (
         <div className="App">
             <h1>WebKrawler</h1>
             <div className="search-bar">
-                <input type="text" placeholder="Search..." />
+                <input
+                    type="text"
+                    placeholder="Search a URL..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
                 <button onClick={handleSearchClick}>
                     <FaSearch />
                 </button>
             </div>
-            {isPopupVisible && (
-                <div className="popup">
-                    <div className="popup-content">Loading...</div>
-                </div>
-            )}
         </div>
     );
 }
