@@ -1,41 +1,49 @@
 import { useState } from "react";
-import responseData from "../model/api-response.json";
+import ResultCrawledURLs from "./ResultCrawledURLs";
 import "./Results.css";
+import ResultGraphVisualization from "./ResultGraphVisualization";
+import ResultPageRanking from "./ResultPageRanking";
+import ResultBlackListedURLs from "./ResultBlackListedURLs";
 
 function Results() {
-    const { data } = responseData;
-    const [showGraph, setShowGraph] = useState(false);
-
-    const handleGraphToggle = () => {
-        setShowGraph((prev) => !prev);
-    };
+    const [activeTab, setActiveTab] = useState(1); // Track the active tab
 
     return (
         <div className="results-container">
-            <div className="results-content">
-                {/* Left Section: URL List */}
-                <div className="list-section">
-                    <h2>URLs List</h2>
-                    <p>Total URLs Crawled: {responseData.total_urls_crawled}</p>
-                    <ul className="url-list">
-                        {data.map((item, index) => (
-                            <li key={index} className="url-item">
-                                <div className="url">{item.url}</div>
-                                <div className="details">
-                                    <span>Rank: {item.rank}</span>
-                                    <span>In-Degree: {item.in_degree}</span>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+            {/* Tab Navigation */}
+            <div className="tabs">
+                <button
+                    className={`tab-button ${activeTab === 1 ? "active" : ""}`}
+                    onClick={() => setActiveTab(1)}
+                >
+                    Crawled URLs
+                </button>
+                <button
+                    className={`tab-button ${activeTab === 2 ? "active" : ""}`}
+                    onClick={() => setActiveTab(2)}
+                    disabled
+                >
+                    Graph Visualization
+                </button>
+                <button
+                    className={`tab-button ${activeTab === 3 ? "active" : ""}`}
+                    onClick={() => setActiveTab(3)}
+                >
+                    Page Ranking
+                </button>
+                <button
+                    className={`tab-button ${activeTab === 4 ? "active" : ""}`}
+                    onClick={() => setActiveTab(4)}
+                >
+                    Black-listed URLs
+                </button>
+            </div>
+            <div className="tab-content">
+                {activeTab === 1 && <ResultCrawledURLs />}
+                {activeTab === 2 && <ResultGraphVisualization />}
+                {activeTab === 3 && <ResultPageRanking />}
+                {activeTab === 4 && <ResultBlackListedURLs />}
 
-                {/* Right Section: Graph Button */}
-                <div className="graph-section">
-                    <button className="graph-button" onClick={handleGraphToggle}>
-                        {showGraph ? "Close Graph Visualization" : "Click Here for Graph Visualization"}
-                    </button>
-                </div>
             </div>
         </div>
     );
