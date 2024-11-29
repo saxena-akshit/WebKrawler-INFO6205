@@ -2,6 +2,8 @@ import { useState } from "react";
 import ResultCrawledURLs from "./ResultCrawledURLs";
 import "./Results.css";
 import ResultGraphVisualization from "./ResultGraphVisualization";
+import ResultPageRanking from "./ResultPageRanking";
+import ResultBlackListedURLs from "./ResultBlackListedURLs";
 
 function Results() {
     const [activeTab, setActiveTab] = useState(1); // Track the active tab
@@ -39,6 +41,8 @@ function Results() {
             <div className="tab-content">
                 {activeTab === 1 && <ResultCrawledURLs />}
                 {activeTab === 2 && <ResultGraphVisualization />}
+                {activeTab === 3 && <ResultPageRanking />}
+                {activeTab === 4 && <ResultBlackListedURLs />}
 
             </div>
         </div>
