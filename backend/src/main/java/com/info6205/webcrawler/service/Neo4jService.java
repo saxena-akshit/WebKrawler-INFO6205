@@ -21,7 +21,7 @@ public class Neo4jService {
     public Neo4jService(@Value("${neo4j.url}") String uri,
             @Value("${neo4j.username}") String username,
             @Value("${neo4j.password}") String password) {
-        this.neo4jDriver = GraphDatabase.driver(uri, AuthTokens.basic(username, password));
+        this.neo4jDriver = createNeo4jDriver(uri, username, password);
     }
 
     public void createNode(String url) {
@@ -99,5 +99,9 @@ public class Neo4jService {
         if (neo4jDriver != null) {
             neo4jDriver.close();
         }
+    }
+
+    protected Driver createNeo4jDriver(String uri, String username, String password) {
+        return GraphDatabase.driver(uri, AuthTokens.basic(username, password));
     }
 }
