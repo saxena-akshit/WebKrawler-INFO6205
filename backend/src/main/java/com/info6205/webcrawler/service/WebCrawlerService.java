@@ -108,7 +108,7 @@ public class WebCrawlerService {
         return calculatePageRankResponse();
     }
 
-    private void processUrl(UrlTask task) {
+    void processUrl(UrlTask task) {
         System.out.println("********\nProcessing URL\n********" + task.getUrl());
         rateLimiter.acquire();
         try {
@@ -259,7 +259,7 @@ public class WebCrawlerService {
 
 
 
-    private int calculatePriority(String url) {
+    int calculatePriority(String url) {
 
         // Ignore blacklisted URLs
     for (String blacklistedUrl : BLACKLISTED_URLS) {
