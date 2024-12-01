@@ -58,14 +58,14 @@ public class PageRankCalculator {
         return ranks;
     }
 
-    private List<String> getInNeighbors(String node, Map<String, List<String>> graph) {
+    List<String> getInNeighbors(String node, Map<String, List<String>> graph) {
         return graph.entrySet().stream()
                 .filter(entry -> entry.getValue().contains(node))
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
 
-    private int getOutDegree(String node, Map<String, List<String>> graph) {
+    int getOutDegree(String node, Map<String, List<String>> graph) {
         return graph.getOrDefault(node, Collections.emptyList()).size();
     }
 }
