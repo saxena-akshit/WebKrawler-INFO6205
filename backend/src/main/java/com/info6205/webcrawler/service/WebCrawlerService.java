@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -21,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -44,6 +46,9 @@ public class WebCrawlerService {
     protected final List<String> blacklistedUrlsList = Collections.synchronizedList(new ArrayList<>());
     protected final List<String> lowPriorityUrlsList = Collections.synchronizedList(new ArrayList<>());
 
+    @Autowired
+    private CrawlerPerformanceTracker performanceTracker;
+
     public WebCrawlerService(
             @Value("${crawler.threadPoolSize}") int threadPoolSize,
             @Value("${crawler.maxDepth}") int maxDepth,
@@ -60,6 +65,7 @@ public class WebCrawlerService {
     }
 
     public Map<String, Object> startCrawl(String startUrl) throws InterruptedException {
+        performanceTracker.startTracking(((ThreadPoolExecutor) threadPool).getCorePoolSize(), maxDepth, startUrl);
         logger.info("Starting web crawl with starting URL: {}", startUrl);
 
         // Clear existing Neo4j graph
@@ -79,7 +85,7 @@ public class WebCrawlerService {
             }
 
             // TODO: remove in prod
-            if (visitedUrls.size() > 20) {
+            if (visitedUrls.size() > 500) {
                 break;
             }
 
@@ -97,6 +103,7 @@ public class WebCrawlerService {
             logger.error("Thread pool termination interrupted: {}", e.getMessage());
         }
 
+        performanceTracker.endTracking();
         // Print blacklisted and low priority URLs
         System.out.println("********Blacklisted URLs:********");
         blacklistedUrlsList.forEach(System.out::println);
@@ -108,6 +115,7 @@ public class WebCrawlerService {
     }
 
     void processUrl(UrlTask task) {
+        performanceTracker.incrementUrlsCrawled();
         System.out.println("********\nProcessing URL\n********" + task.getUrl());
         rateLimiter.acquire();
         try {
