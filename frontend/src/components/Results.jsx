@@ -1,8 +1,7 @@
 import { useState } from "react";
 import ResultCrawledURLs from "./ResultCrawledURLs";
 import "./Results.css";
-import ResultGraphVisualization from "./ResultGraphVisualization";
-import ResultPageRanking from "./ResultPageRanking";
+
 import ResultBlackListedURLs from "./ResultBlackListedURLs";
 
 function Results() {
@@ -18,19 +17,7 @@ function Results() {
                 >
                     Crawled URLs
                 </button>
-                <button
-                    className={`tab-button ${activeTab === 2 ? "active" : ""}`}
-                    onClick={() => setActiveTab(2)}
-                    disabled
-                >
-                    Graph Visualization
-                </button>
-                <button
-                    className={`tab-button ${activeTab === 3 ? "active" : ""}`}
-                    onClick={() => setActiveTab(3)}
-                >
-                    Page Ranking
-                </button>
+
                 <button
                     className={`tab-button ${activeTab === 4 ? "active" : ""}`}
                     onClick={() => setActiveTab(4)}
@@ -40,8 +27,6 @@ function Results() {
             </div>
             <div className="tab-content">
                 {activeTab === 1 && <ResultCrawledURLs />}
-                {activeTab === 2 && <ResultGraphVisualization />}
-                {activeTab === 3 && <ResultPageRanking />}
                 {activeTab === 4 && <ResultBlackListedURLs />}
 
             </div>
