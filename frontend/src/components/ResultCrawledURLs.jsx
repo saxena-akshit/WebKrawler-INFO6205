@@ -7,7 +7,6 @@ function ResultCrawledURLs() {
 
     return (
         <div className="list-section">
-            <h2>Crawled URLs</h2>
             <p>Total URLs Crawled: {total_urls_crawled}</p>
             <div className="scrollable-list">
                 <ul className="url-list">
@@ -15,8 +14,8 @@ function ResultCrawledURLs() {
                         <li key={index} className="url-item">
                             <div className="url">{item.url}</div>
                             <div className="details">
-                                <span>Rank: {item.rank}</span>
-                                <span>In-Degree: {item.in_degree}</span>
+                                <span><b>Rank: {item.rank}</b></span>
+                                <span><b>In-Degree: {item.in_degree}</b></span>
                             </div>
                         </li>
                     ))}
